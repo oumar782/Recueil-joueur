@@ -393,26 +393,48 @@ input[type="checkbox"]:checked + .choice-text {
   position: relative;
   width: 100%;
   padding: 1.25rem 2rem;
-  background: var(--accent-sport);
-  color: var(--accent-sport-foreground);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
   border: none;
-  border-radius: 1rem;
-  font-size: 1.125rem;
-  font-weight: bold;
+  border-radius: 0.75rem;
+  font-size: 1.1rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: var(--shadow-button);
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
-@media (min-width: 640px) {
-  .submit-button {
-    font-size: 1.25rem;
-  }
+.submit-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
 }
 
-.submit-button:hover {
-  transform: scale(1.02);
-  background: var(--accent-glow);
+.submit-button:disabled {
+  opacity: 0.8;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.submit-button.loading {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .submit-button:active {

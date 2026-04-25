@@ -799,59 +799,69 @@ const App = () => {
     setLoading(true);
     setError(null);
     
-    const formData = new FormData(e.currentTarget);
-    
-    // Construction de l'objet data pour l'API
+    // Optimisation : collecte directe des données sans FormData
+    const form = e.currentTarget;
     const data = {};
     
-    // Récupération de toutes les valeurs
-    for (const [key, value] of formData.entries()) {
-      if (formData.getAll(key).length > 1) {
-        // Pour les checkbox (tableaux)
-        data[key] = formData.getAll(key);
-      } else {
-        // Pour les champs simples
-        data[key] = value;
+    // Collecte optimisée des données
+    const elements = form.elements;
+    for (let i = 0; i < elements.length; i++) {
+      const element = elements[i];
+      if (element.name && !element.disabled) {
+        if (element.type === 'checkbox') {
+          if (element.checked) {
+            // Gestion des checkbox multiples
+            if (!data[element.name]) {
+              data[element.name] = [];
+            }
+            data[element.name].push(element.value);
+          }
+        } else if (element.type !== 'submit') {
+          data[element.name] = element.value;
+        }
       }
     }
     
-    // S'assurer que les tableaux sont bien des tableaux même avec un seul élément
-    const arrayFields = [
-      'avec_qui', 'trouver_terrain', 'moyen_reservation', 
-      'problemes_reservation', 'frustrations', 'freins', 'terrains_pleins'
-    ];
-    
-    arrayFields.forEach(field => {
-      if (data[field] && !Array.isArray(data[field])) {
-        data[field] = [data[field]];
-      }
-    });
-    
-    // Forcer la langue française dans la base de données
+    // Optimisation : forcer la langue une seule fois
     data.language = 'fr';
     
+    // Optimisation : timeout de 10 secondes pour éviter les attentes infinies
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    
     try {
+      // Optimisation : requête avec keep-alive et compression implicite
       const response = await fetch('https://backend-foot-omega.vercel.app/api/joueur/submissions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Connection': 'keep-alive',
         },
         body: JSON.stringify(data),
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
+      
+      // Optimisation : vérification rapide du statut
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       
       const result = await response.json();
       
-      if (response.ok) {
-        console.log('Formulaire soumis avec succès:', result);
-        setSubmitted(true);
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      } else {
-        setError(result.error || 'Une erreur est survenue');
-        console.error('Erreur API:', result);
-      }
+      setSubmitted(true);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
-      setError('Erreur de connexion au serveur');
-      console.error('Erreur réseau:', err);
+      clearTimeout(timeoutId);
+      
+      if (err.name === 'AbortError') {
+        setError('Le serveur met trop de temps à répondre. Veuillez réessayer.');
+      } else if (err.message.includes('Failed to fetch')) {
+        setError('Erreur de connexion. Vérifiez votre internet.');
+      } else {
+        setError('Une erreur est survenue lors de l\'envoi.');
+      }
     } finally {
       setLoading(false);
     }
@@ -1169,8 +1179,17 @@ const App = () => {
 
             {/* Submit */}
             <div className="submit-section">
-              <button type="submit" className="submit-button" disabled={loading}>
-                {loading ? 'Envoi en cours...' : t.submit} ⚽
+              <button type="submit" className={`submit-button ${loading ? 'loading' : ''}`} disabled={loading}>
+                {loading ? (
+                  <>
+                    <span className="loading-spinner"></span>
+                    Envoi en cours...
+                  </>
+                ) : (
+                  <>
+                    {t.submit} ⚽
+                  </>
+                )}
               </button>
               <p className="submit-note">
                 {t.submitNote}
