@@ -799,38 +799,39 @@ const App = () => {
     setLoading(true);
     setError(null);
     
-    // Optimisation : collecte directe des données sans FormData
-    const form = e.currentTarget;
+    // Utilisation de FormData pour garantir la collecte correcte de toutes les données
+    const formData = new FormData(e.currentTarget);
+    
+    // Construction de l'objet data pour l'API avec la méthode fiable
     const data = {};
     
-    // Collecte optimisée des données
-    const elements = form.elements;
-    for (let i = 0; i < elements.length; i++) {
-      const element = elements[i];
-      if (element.name && !element.disabled) {
-        if (element.type === 'checkbox') {
-          if (element.checked) {
-            // Gestion des checkbox multiples
-            if (!data[element.name]) {
-              data[element.name] = [];
-            }
-            data[element.name].push(element.value);
-          }
-        } else if (element.type !== 'submit') {
-          data[element.name] = element.value;
-        }
-      }
+    // Récupération correcte de toutes les valeurs
+    for (const key of new Set(Array.from(formData.keys()))) {
+      const all = formData.getAll(key);
+      data[key] = all.length > 1 ? all : all[0];
     }
     
-    // Optimisation : forcer la langue une seule fois
+    // S'assurer que les tableaux sont bien des tableaux même avec un seul élément
+    const arrayFields = [
+      'avec_qui', 'trouver_terrain', 'moyen_reservation', 
+      'problemes_reservation', 'frustrations', 'freins', 'terrains_pleins'
+    ];
+    
+    arrayFields.forEach(field => {
+      if (data[field] && !Array.isArray(data[field])) {
+        data[field] = [data[field]];
+      }
+    });
+    
+    // Forcer la langue française dans la base de données
     data.language = 'fr';
     
-    // Optimisation : timeout de 10 secondes pour éviter les attentes infinies
+    // Timeout de 10 secondes pour éviter les attentes infinies
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
     
     try {
-      // Optimisation : requête avec keep-alive et compression implicite
+      // Requête optimisée mais fiable
       const response = await fetch('https://backend-foot-omega.vercel.app/api/joueur/submissions', {
         method: 'POST',
         headers: {
@@ -843,7 +844,6 @@ const App = () => {
       
       clearTimeout(timeoutId);
       
-      // Optimisation : vérification rapide du statut
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
